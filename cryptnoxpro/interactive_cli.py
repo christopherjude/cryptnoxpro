@@ -5,10 +5,10 @@ Module for application that behaves as command line interface
 import shutil
 import sys
 import traceback
-from . import server
 from pathlib import Path
 from typing import List
-from . import exit
+import socket
+from . import config
 
 import argparse
 import cryptnoxpy
@@ -262,8 +262,15 @@ class InteractiveCli:
 
     def _run(self):
         print("Starting server and loading cards...")
-        server_thread = server.server_thread('Server_thread')
-        server_thread.start()
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        CARD_SERVER = socket.gethostbyname(socket.gethostname() + ".local")
+        ADDR = (CARD_SERVER,5055)
+        try:
+            client.connect(ADDR)
+            config._REMOTE_CONNECTIONS.append(client)
+        except Exception as e:
+            print(f'No card connection found:{e}')
+
         try:
             self._cards.refresh()
             self._card_info = list(self._cards.values())[0].info
@@ -279,8 +286,15 @@ class InteractiveCli:
             try:
                 self._process_command()
             except InteractiveCli.ExitException:
-                exit.initiate_exit()
-                server_thread.join()
+                try:
+                    message = "!Close".encode('utf-8')
+                    msg_length = len(message)
+                    send_length = str(msg_length).encode('utf-8')
+                    send_length += b' ' * (64 - len(send_length))
+                    client.send(send_length)
+                    client.send(message)
+                except Exception as e:
+                    print(f'Probably no socket to close: {e}')
                 break
 
     def is_valid_subcommand(self, new_subcommand: List[str],
