@@ -19,6 +19,8 @@ from .erc_token import contract
 from .helper.config import create_config_method
 from .helper.helper_methods import sign
 from .helper.notification import MORE_THAN_X_RESULTS, MONTH_PERIOD_IN_BLOCKS
+from .rcsm import remote_tx_check
+from . import user_keys
 
 try:
     import enums
@@ -588,6 +590,19 @@ class Eth(Command):
             value=web3.Web3.toWei(amount, "ether"),
             data=b''
         )
+
+        slots = user_keys.get()
+        data = [[name] for name, slot in slots.items() if card.user_key_enabled(slot)]
+
+        if not data:
+            print("No user keys registered in card")
+            raise ValueError({"message":"No user key for remote validation"})
+
+        sanitized_transaction = remote_tx_check(sanitized_transaction,card.user_key_info(cryptnoxpy.SlotIndex.EC256R1))
+
+        if type(sanitized_transaction) == str:
+            raise ValueError({"message":"Unauthentic signature"})
+
         print("\nSigning with the Cryptnox")
         digest = endpoint.transaction_hash(sanitized_transaction)
 
