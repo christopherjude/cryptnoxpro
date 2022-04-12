@@ -126,9 +126,8 @@ def remote_tx_check(transaction,public_key):
             client.close()
             print(f'Disconnecting {e}')
             break
-
     if 'error' in response.keys():
-        print(f'Non-authentic server signature: {response}')
+        return response['error']
     else:
         '''
         <Card> Check user signature authenticity

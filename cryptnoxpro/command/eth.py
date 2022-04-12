@@ -598,10 +598,16 @@ class Eth(Command):
             print("No user keys registered in card")
             raise ValueError({"message":"No user key for remote validation"})
 
-        sanitized_transaction = remote_tx_check(sanitized_transaction,card.user_key_info(cryptnoxpy.SlotIndex.EC256R1))
+        try:
+            sanitized_transaction = remote_tx_check(sanitized_transaction,card.user_key_info(cryptnoxpy.SlotIndex.EC256R1))
+        except ConnectionRefusedError as cre:
+            raise ValueError({"message":"Connection refused from remote, please ensure service is running on server."})
+        except Exception as e:
+            print(f'Exception occurred: {e}')
+            raise ValueError({"message":"Error in remote tx check"})
 
         if type(sanitized_transaction) == str:
-            raise ValueError({"message":"Unauthentic signature"})
+            raise ValueError({"message":f"{sanitized_transaction}"})
 
         print("\nSigning with the Cryptnox")
         digest = endpoint.transaction_hash(sanitized_transaction)
